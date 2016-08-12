@@ -2,8 +2,11 @@
 
 This a prototype of using Postgres as broker and backend for [Machinery](https://github.com/RichardKnop/machinery).
 
+
 For the broker part, it just polls the database each second so for efficiency, use AMQP or Redis brokers.
+
 For the backend, it simply uses Postgres database for storing task details.
+
 
 This prototype help me to understand how Machinery works and know how good is [GROM](https://github.com/jinzhu/gorm)
 
