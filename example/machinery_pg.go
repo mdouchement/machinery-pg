@@ -29,7 +29,7 @@ func init() {
 	err = machinerypg.MigrateBroker(cnf.Broker)
 	check(err)
 
-	// Server instaciation
+	// Server instanciation
 	cnf.Broker = "eager://"
 	cnf.ResultBackend = "eager://"
 	server, err = machinery.NewServer(cnf)
@@ -37,7 +37,7 @@ func init() {
 	cnf.Broker = brokerUrl
 	cnf.ResultBackend = backendUrl
 
-	// Defines Postgres as broker an backend result
+	// Defines Postgres as broker and backend result
 	broker := machinerypg.NewBroker(cnf)
 	server.SetBroker(broker)
 	backend := machinerypg.NewBackend(cnf)
@@ -57,7 +57,7 @@ func init() {
 func main() {
 	w := flag.Bool("w", false, "Launch worker")
 	s := flag.Bool("s", false, "Send a task")
-	sg := flag.Bool("sg", false, "Send a group tasks")
+	sg := flag.Bool("sg", false, "Send a group of tasks")
 	flag.Parse()
 
 	if *w {
