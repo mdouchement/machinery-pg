@@ -2,7 +2,6 @@ package machinerypg
 
 import (
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
@@ -11,8 +10,15 @@ import (
 
 	"github.com/RichardKnop/machinery/v1/brokers"
 	"github.com/RichardKnop/machinery/v1/config"
+	"github.com/RichardKnop/machinery/v1/logger"
 	"github.com/RichardKnop/machinery/v1/signatures"
 )
+
+var log logger.Interface
+
+func init() {
+	log = logger.Get()
+}
 
 // Broker contains all stuff fot using Postgres as a Machinery broker
 type Broker struct {
@@ -61,7 +67,7 @@ func (pb *Broker) StartConsuming(consumerTag string, taskProcessor brokers.TaskP
 		defer pb.wg.Done()
 		ticker := time.NewTicker(1 * time.Second) // Use notfication instead polling?
 
-		log.Print("[*] Waiting for messages. To exit press CTRL+C")
+		fmt.Println("[*] Waiting for messages. To exit press CTRL+C")
 		for {
 			select {
 			// A way to stop this goroutine from redisBroker.StopConsuming
