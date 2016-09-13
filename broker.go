@@ -2,6 +2,7 @@ package machinerypg
 
 import (
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -10,15 +11,8 @@ import (
 
 	"github.com/RichardKnop/machinery/v1/brokers"
 	"github.com/RichardKnop/machinery/v1/config"
-	"github.com/RichardKnop/machinery/v1/logger"
 	"github.com/RichardKnop/machinery/v1/signatures"
 )
-
-var log logger.Interface
-
-func init() {
-	log = logger.Get()
-}
 
 // Broker contains all stuff fot using Postgres as a Machinery broker
 type Broker struct {
