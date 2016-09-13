@@ -2,7 +2,6 @@ package machinerypg
 
 import (
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
