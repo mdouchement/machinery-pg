@@ -28,6 +28,7 @@ func init() {
 	// Database migration
 	err = machinerypg.MigrateBroker(cnf.Broker)
 	check(err)
+	machinerypg.StartCleanupRoutine()
 
 	// Server instanciation
 	cnf.Broker = "eager://"
