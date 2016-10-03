@@ -21,15 +21,12 @@ func StartCleanupRoutine() {
 	ticker := time.NewTicker(CleanupInterval)
 	quitCleanup = make(chan struct{})
 
+	deleteOldSucceededTasks()
 	go func() {
 		for {
 			select {
 			case <-ticker.C:
-				DB.
-					Unscoped().
-					Where("state = ?", backends.SuccessState).
-					Where("created_at < ?", time.Now().UTC().Add(-24*time.Hour)).
-					Delete(&Task{})
+				deleteOldSucceededTasks()
 			case <-quitCleanup:
 				ticker.Stop()
 				return
@@ -41,6 +38,14 @@ func StartCleanupRoutine() {
 // StopCleanup stops cleanup routine.
 func StopCleanup() {
 	close(quitCleanup)
+}
+
+func deleteOldSucceededTasks() {
+	DB.
+		Unscoped().
+		Where("state = ?", backends.SuccessState).
+		Where("created_at < ?", time.Now().UTC().Add(-24*time.Hour)).
+		Delete(&Task{})
 }
 
 // ------------------------- //
