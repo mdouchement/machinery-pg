@@ -67,14 +67,15 @@ func FailedTasks() Metrics {
 	return countTasks(backends.FailureState)
 }
 
-func countTasks(state string) (m Metrics) {
+func countTasks(state string) Metrics {
 	tasks := make([]Task, 0)
 	DB.Where("state = ?", state).
 		Find(&tasks)
 
+	m := Metrics{}
 	for _, t := range tasks {
 		m[t.Name] = m.Int(t.Name) + 1
 	}
 
-	return
+	return m
 }
