@@ -11,17 +11,20 @@ import (
 	"github.com/RichardKnop/machinery/v1/brokers"
 	"github.com/RichardKnop/machinery/v1/config"
 	"github.com/RichardKnop/machinery/v1/signatures"
+	"github.com/RichardKnop/machinery/v1/utils"
 )
 
 // Broker contains all stuff fot using Postgres as a Machinery broker
 type Broker struct {
 	registeredTaskNames []string
 	retry               bool
-	// retryFunc           func()
-	stopChan          chan int
-	stopReceivingChan chan int
-	errorsChan        chan error
-	wg                sync.WaitGroup
+	retryFunc           func()
+	stopChan            chan int
+	stopReceivingChan   chan int
+	errorsChan          chan error
+	maxParallelTasks    int
+	limiter             chan struct{}
+	wg                  sync.WaitGroup
 }
 
 // NewBroker creates new Postgres broker instance
@@ -30,7 +33,15 @@ func NewBroker(cnf *config.Config) brokers.Broker {
 	if err != nil {
 		panic(fmt.Errorf("NewBroker: %s", err))
 	}
-	return &Broker{}
+	return &Broker{
+		maxParallelTasks: 6,
+		retry:            true,
+	}
+}
+
+func (pb *Broker) SetMaxParallelTasks(n int) {
+	pb.maxParallelTasks = n
+	pb.limiter = make(chan struct{}, pb.maxParallelTasks)
 }
 
 // SetRegisteredTaskNames sets registered task names
@@ -50,10 +61,21 @@ func (pb *Broker) IsTaskRegistered(name string) bool {
 
 // StartConsuming enters a loop and waits for incoming messages
 func (pb *Broker) StartConsuming(consumerTag string, taskProcessor brokers.TaskProcessor) (bool, error) {
+	if pb.retryFunc == nil {
+		pb.retryFunc = utils.RetryClosure()
+	}
+
+	pb.retryFunc = utils.RetryClosure()
 	pb.stopChan = make(chan int)
 	pb.stopReceivingChan = make(chan int)
 	pb.errorsChan = make(chan error)
 	deliveries := make(chan *Task)
+
+	if err := DB.DB().Ping(); err != nil {
+		// Machinery polls StartConsuming so retryFunc is called and blocks the polling.
+		pb.retryFunc()
+		return pb.retry, err // retry true
+	}
 
 	pb.wg.Add(1)
 	go func() {
@@ -89,8 +111,15 @@ func (pb *Broker) StartConsuming(consumerTag string, taskProcessor brokers.TaskP
 					}
 				}
 
-				// End of the transaction
-				tx.Commit()
+				if err := DB.DB().Ping(); err != nil {
+					// Start retry if connection refused
+					// NOTE: tx.Commit() panics when connection refused error occurred
+					pb.errorsChan <- fmt.Errorf("StartConsuming: %s", err)
+					break
+				} else {
+					// End of the transaction
+					tx.Commit()
+				}
 
 				if tx.Error != nil {
 					pb.errorsChan <- fmt.Errorf("StartConsuming: %s", tx.Error)
@@ -176,7 +205,7 @@ func (pb *Broker) GetPendingTasks(queue string) ([]*signatures.TaskSignature, er
 
 // Consume a single message
 func (pb *Broker) consumeOne(task *Task, taskProcessor brokers.TaskProcessor) {
-	log.Printf("Received new message: %s - %s", task.UUID, task.Name)
+	logg.Printf("Received new message: %s - %s", task.UUID, task.Name)
 
 	sig, err := task.Signature()
 	if err != nil {
@@ -190,14 +219,20 @@ func (pb *Broker) consumeOne(task *Task, taskProcessor brokers.TaskProcessor) {
 
 // Consumes messages...
 func (pb *Broker) consume(deliveries <-chan *Task, taskProcessor brokers.TaskProcessor) error {
+	if pb.limiter == nil {
+		pb.limiter = make(chan struct{}, pb.maxParallelTasks)
+	}
+
 	for {
 		select {
 		case err := <-pb.errorsChan:
 			return err
 		case d := <-deliveries:
 			// Consume the task inside a gotourine so multiple tasks
-			// can be processed concurrently
+			// can be processed concurrently according to the limiter
+			pb.limiter <- struct{}{}
 			go func() {
+				defer func() { <-pb.limiter }()
 				pb.consumeOne(d, taskProcessor)
 			}()
 		case <-pb.stopChan:
@@ -211,4 +246,6 @@ func (pb *Broker) stopReceiving() {
 	pb.stopReceivingChan <- 1
 	// Waiting for the receiving goroutine to have stopped
 	pb.wg.Wait()
+	// Draining limiter channel
+	close(pb.limiter)
 }
