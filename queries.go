@@ -67,6 +67,25 @@ func FailedTasks() Metrics {
 	return countTasks(backends.FailureState)
 }
 
+func Last20Errors() []Metrics {
+	tasks := make([]Task, 0)
+	DB.Where("state = ?", backends.FailureState).
+		Order("created_at DESC").
+		Limit(20).
+		Find(&tasks)
+
+	m := []Metrics{}
+	for _, t := range tasks {
+		m = append(m, Metrics{
+			"id":    t.UUID,
+			"name":  t.Name,
+			"error": t.Error,
+		})
+	}
+
+	return m
+}
+
 func countTasks(state string) Metrics {
 	tasks := make([]Task, 0)
 	DB.Where("state = ?", state).
