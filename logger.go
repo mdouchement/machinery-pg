@@ -4,12 +4,12 @@ import (
 	"github.com/RichardKnop/machinery/v1/logger"
 )
 
-var log logger.Interface
+var logg logger.Interface
 
 func init() {
-	log = logger.Get()
+	logg = logger.Get()
 }
 
 func SetLogger(l logger.Interface) {
-	log = l
+	logg = l
 }

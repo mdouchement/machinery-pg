@@ -31,7 +31,6 @@ func GormInit(url string) error {
 	db.DB()
 
 	// Then you could invoke `*sql.DB`'s functions with it
-	db.DB().Ping()
 	db.DB().SetMaxIdleConns(10)
 	db.DB().SetMaxOpenConns(100)
 
