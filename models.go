@@ -39,7 +39,7 @@ type Task struct {
 	// signatures.TaskSignature
 	UUID      string `gorm:"primary_key;type:uuid"`
 	Name      string
-	GroupUUID *string `gorm:"index;type:uuid"` // *string can be nil/NULL (or either use []byte that should be clearer)
+	GroupUUID *string `gorm:"index;type:uuid"` // *string can be nil/NULL
 
 	// Broker
 	Consumed bool
@@ -69,7 +69,7 @@ func NewTaskWithID(taskUUID string) *Task {
 }
 
 // ApplySignature adds the task to the current Task model
-func (t *Task) ApplySignature(task *signatures.TaskSignature) error { // TODO: panic instead of return error?
+func (t *Task) ApplySignature(task *signatures.TaskSignature) error {
 	t.UUID = UUID(task.UUID)
 	t.Name = task.Name
 	t.GroupUUID = NGUUID(task.GroupUUID)
@@ -85,7 +85,7 @@ func (t *Task) ApplySignature(task *signatures.TaskSignature) error { // TODO: p
 
 // Signature returns the signature object serialzed in this Task Model
 // It returns an error if unmarshalization fails
-func (t *Task) Signature() (*signatures.TaskSignature, error) { // TODO: panic instead of return error?
+func (t *Task) Signature() (*signatures.TaskSignature, error) {
 	task := &signatures.TaskSignature{}
 	if err := json.Unmarshal(t.RawTask, task); err != nil {
 		return nil, fmt.Errorf("Signature: %s", err)
