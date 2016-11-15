@@ -8,6 +8,7 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	_ "github.com/lib/pq"
 
+	"github.com/RichardKnop/machinery/v1/backends"
 	"github.com/RichardKnop/machinery/v1/brokers"
 	"github.com/RichardKnop/machinery/v1/config"
 	"github.com/RichardKnop/machinery/v1/signatures"
@@ -161,6 +162,7 @@ func (pb *Broker) Publish(task *signatures.TaskSignature) error {
 	count := -1
 	tx.Model(&Task{}).Where("UUID = ?", UUID(t.UUID)).Count(&count)
 	if count == 0 {
+		t.State = backends.PendingState
 		tx.Create(t)
 	} else {
 		tx.Model(t).Updates(map[string]interface{}{
