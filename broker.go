@@ -26,6 +26,7 @@ type Broker struct {
 	maxParallelTasks    int
 	limiter             chan struct{}
 	wg                  sync.WaitGroup
+	mu                  sync.Mutex
 }
 
 // NewBroker creates new Postgres broker instance
@@ -40,7 +41,17 @@ func NewBroker(cnf *config.Config) brokers.Broker {
 	}
 }
 
+func (pb *Broker) MaxParallelTasks() int {
+	pb.mu.Lock()
+	defer pb.mu.Unlock()
+
+	return pb.maxParallelTasks
+}
+
 func (pb *Broker) SetMaxParallelTasks(n int) {
+	pb.mu.Lock()
+	defer pb.mu.Unlock()
+
 	pb.maxParallelTasks = n
 	pb.limiter = make(chan struct{}, pb.maxParallelTasks)
 }
